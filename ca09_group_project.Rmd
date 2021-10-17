@@ -252,6 +252,8 @@ listings <- listings %>%
 
 Use histograms or density plots to examine the distributions of `price_4_nights` and `log(price_4_nights)`. Which variable should you use for the regression model? Why?
 
+As seen in the graphs below, the log of `price_4_nights` should be used in the regression model. This is because the log provides a more normal-shaped bell curve, versus the regular distribution of price_4_nights which has a quite severe right skew (even after adjusting for some of the major outliers).
+
 ```{r}
 #histogram price_4_nights
 ggplot(listings, aes(x=price_4_nights)) + 
@@ -260,6 +262,16 @@ ggplot(listings, aes(x=price_4_nights)) +
 #density plot for price_4_nights
 ggplot(listings, aes(x=price_4_nights)) + 
   geom_density()
+
+#histogram log(price_4_nights)
+ggplot(listings, aes(x=price_4_nights)) + 
+  geom_histogram() + 
+  scale_x_log10()
+
+#density plot log(price_4_nights)
+ggplot(listings, aes(x=price_4_nights)) + 
+  geom_density() + 
+  scale_x_log10()
 
 
 ```
@@ -271,7 +283,25 @@ Fit a regression model called `model1` with the following explanatory variables:
 
 We want to determine if `room_type` is a significant predictor of the cost for 4 nights, given everything else in the model. Fit a regression model called model2 that includes all of the explananatory variables in `model1` plus `room_type`. 
 
+```{r, models}
+#create model1
+model1 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1) 
 
+#create model2
+model2 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type, data=listings)
+#view model summary
+msummary(model2)
+#graph model/correlations
+GGally::ggpairs(model2)
+
+
+
+
+```
 
 ## Further variables/questions to explore on our own
 
