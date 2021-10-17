@@ -118,17 +118,10 @@ dplyr::glimpse(listings)
 ```
 ## Create Summary Statistics
 
-- How many variables/columns? How many rows/observations? - Through the skim, we observe that there are 74 variables and 4964 observations in the dataframe.
-- Which variables are numbers?  - there are 38 numeric variables - see the table below for a list of them
-- Which are categorical or *factor* variables (numeric or character variables with variables that have a fixed and known set of possible values?) - there are 9 logical variables - see the table below for a list of them
-- What are the correlations between variables? Does each scatterplot support a linear relationship between variables? Do any of the correlations appear to be conditional on the value of a categorical variable? 
+Through the skim, we observe that there are 74 variables and 4964 observations in the dataframe.   
 ```{r, summary_statistics}
-listings <- listings %>% 
-  mutate(price = parse_number(price))
 mosaic::favstats(price ~ accommodates, data = listings)
 
-
-skimr::skim(listings)
 ```
 
 > In all cases, please think about the message your plot is conveying. Don’t just say "This is my X-axis, this is my Y-axis", but rather what’s the **so what** of the plot. Tell some sort of story and speculate about the differences in the patterns in no more than a paragraph.
@@ -143,8 +136,10 @@ Since `price` is a quantitative variable, we need to make sure it is stored as n
 
 ``` {r}
 listings <- listings %>% 
+  #make price a numeric variable
   mutate(price = parse_number(price))
 
+#check that price is a numeric variable
 typeof(listings$price)
 ```
   
@@ -155,40 +150,66 @@ Use `typeof(listing$price)` to confirm that `price` is now stored as a number.
 
 
 Next, we look at the variable `property_type`. We can use the `count` function to determine how many categories there are their frequency. What are the top 4 most common property types? What proportion of the total listings do they make up? 
-```{r}
-listings %>% 
- group_by(property_type) %>% 
-   summarize(number=count(property_type)) %>% 
-   sort(number,decreasing=TRUE)
-
-
-```
 
 Since the vast majority of the observations in the data are one of the top four or five property types, we would like to create a simplified version of `property_type` variable that has 5 categories: the top four categories and `Other`. Fill in the code below to create `prop_type_simplified`.
 
-```
+``` {r, property_analysis}
+
+#find out which property types are the top 5
+count(listings, property_type) %>% 
+  arrange(desc(n))
+
+#create new simplified property type variable
 listings <- listings %>%
   mutate(prop_type_simplified = case_when(
-    property_type %in% c("______","______", "______","______") ~ property_type, 
+    property_type %in% c("Entire rental unit", #1 property type
+                         "Private room in rental unit", #2 property type
+                         "Entire condominium (condo)", #3 property type...
+                         "Private room in residential home") ~ property_type, 
     TRUE ~ "Other"
   ))
   
+#view new data
+glimpse(listings)
+
 ```
 Use the code below to check that `prop_type_simplified` was correctly made.
 
-```
+```{r, check_work}
+#check that prop_type_simplified was made correctly
 listings %>%
   count(property_type, prop_type_simplified) %>%
   arrange(desc(n))        
 ```        
+It appears that the the simplified property type variable was correctly made. The top four property types each received their own category, while the rest of the property types are put into the "Other" category.
+
 
 Airbnb is most commonly used for travel purposes, i.e., as an alternative to traditional hotels. We only want to include  listings in our regression analysis that are intended for travel purposes:
 
 - What are the  most common values for the variable `minimum_nights`? 
-- Is ther any value among the common values that stands out? 
+The most common values for the variable `minimum_nights` are unsurprisingly one, two, and three nights. These would be the most common because many people may use Airbnb for a quick weekend getaway, and the owners who post on Airbnb probably realize this. The fourth most popular value for this variable was five nights, and these listings are probably going to be more attractive to those taking a weeklong vacation.
+
+- Is there any value among the common values that stands out? 
+None of the values in the top thre minimum nights stayed particularly stood out. The number of nights for the top three were simply between one and three night minimum stays, so even if you were looking for an Airbnb for a long weekend you would still qualify for these listings. The one value that kind of stood out to me was the 14 night minimum value. 14 nights is a bit too long for most vacations (for the average person or family), so it would only really appeal to someone looking for a longer-term stay (and at that point why not just make it a 21 or 30 night minimum?). 
+
 - What is the likely intended purpose for Airbnb listings with this seemingly unusual value for `minimum_nights`?
+The properties with slightly strange values for minimum_nights probably have varied reasons for such values. For example, for the really long minimum nights (100+ nights), the owner of the property may be targeting people who basically live in the city but for whatever reason may not be renting an actual apartment. Or, these properties may be targeting students who are studying abroad for the semester or year and are looking for accommodations. For other unusual values, the owner may have a certain schedule they like to follow when renting out the listing or possibly can only rent it for a certain period of time, so they create a very niche minimum number of nights to attract people who are looking for very specific properties to stay at.
 
 Filter the airbnb data so that it only includes observations with `minimum_nights <= 4`
+
+```{r}
+#find most common values for minimum_nights
+count(listings, minimum_nights) %>% 
+  arrange(desc(n))
+
+#filter data to only include obs with minimum nights less than or equal to 4
+listings <- listings %>% 
+  filter(minimum_nights <= 4)
+
+glimpse(listings$minimum_nights)
+
+
+```
 
         
 # Mapping 
@@ -199,14 +220,14 @@ The following code, having downloaded a dataframe `listings` with all AirbnB lis
 
 
 ```{r, out.width = '80%'}
-
+#create mapping distribution of Munich Airbnb listings
 leaflet(data = filter(listings, minimum_nights <= 4)) %>% 
   addProviderTiles("OpenStreetMap.Mapnik") %>% 
   addCircleMarkers(lng = ~longitude, 
                    lat = ~latitude, 
-                   radius = 1, 
-                   fillColor = "blue", 
-                   fillOpacity = 0.4, 
+                   radius = 1, #specify size of data points on map
+                   fillColor = "blue", #specify color
+                   fillOpacity = 0.4, #specify opacity of color
                    popup = ~listing_url,
                    label = ~property_type)
 ```
@@ -217,8 +238,31 @@ leaflet(data = filter(listings, minimum_nights <= 4)) %>%
 For the target variable $Y$, we will use the cost for two people to stay at an Airbnb location for four (4) nights. 
 
 Create a new variable called `price_4_nights` that uses `price`, and `accomodates` to calculate the total cost for two people to stay at the Airbnb property for 4 nights. This is the variable $Y$ we want to explain.
+```{r}
+#create new variable price_4_nights
+listings <- listings %>% 
+  #filter for listings that can accommodate 2 or more people
+  filter(accommodates >= 2) %>% 
+  #create price_4_nights variable
+  mutate(price_4_nights = price*4) %>% 
+    #filter out extreme outliers that skew outliers
+  filter(price_4_nights < 20000)
+
+```
 
 Use histograms or density plots to examine the distributions of `price_4_nights` and `log(price_4_nights)`. Which variable should you use for the regression model? Why?
+
+```{r}
+#histogram price_4_nights
+ggplot(listings, aes(x=price_4_nights)) + 
+  geom_histogram()
+
+#density plot for price_4_nights
+ggplot(listings, aes(x=price_4_nights)) + 
+  geom_density()
+
+
+```
 
 Fit a regression model called `model1` with the following explanatory variables: `prop_type_simplified`, `number_of_reviews`, and `review_scores_rating`. 
 
