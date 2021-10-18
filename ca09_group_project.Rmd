@@ -57,7 +57,7 @@ All of the listings are a GZ file, namely they are archive files compressed by t
 
 ```{r load_data, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
 
-# use cache=TRUE so you dont donwload the data everytime you knit
+# use cache=TRUE so you don't download the data every time you knit
 
 listings <- vroom("http://data.insideairbnb.com/germany/bv/munich/2021-09-28/data/listings.csv.gz") %>% 
        clean_names()
@@ -289,6 +289,10 @@ We want to determine if `room_type` is a significant predictor of the cost for 4
 model1 <- lm(log(price_4_nights) ~ prop_type_simplified + number_of_reviews + review_scores_rating, data=listings)
 #view model summary
 msummary(model1)
+#check VIF of variables
+car::vif(model1)
+#check residuals
+autoplot(model1)
 #graph model/correlations
 GGally::ggpairs(model1) 
 
@@ -296,6 +300,10 @@ GGally::ggpairs(model1)
 model2 <- lm(log(price_4_nights) ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type, data=listings)
 #view model summary
 msummary(model2)
+#check VIF of variables
+car::vif(model2)
+#check residuals
+
 #graph model/correlations
 GGally::ggpairs(model2)
 
