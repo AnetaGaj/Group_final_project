@@ -279,28 +279,32 @@ ggplot(listings, aes(x=price_4_nights)) +
 Fit a regression model called `model1` with the following explanatory variables: `prop_type_simplified`, `number_of_reviews`, and `review_scores_rating`. 
 
 - Interpret the coefficient `review_scores_rating` in terms of `price_4_nights`.
+Whenever review score increases 1 star, the price for 4 nights decreases. This effect is, however, not statistically significant, thus the variable has no effect on the price of 4 nights. The issue is that number of reviews is correlated with review_scores_rating, introducing colinearity.
 - Interpret the coefficient of `prop_type_simplified` in terms of `price_4_nights`.
 
 We want to determine if `room_type` is a significant predictor of the cost for 4 nights, given everything else in the model. Fit a regression model called model2 that includes all of the explananatory variables in `model1` plus `room_type`. 
 
 ```{r, models}
 #create model1
-model1 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating, data=listings)
+model1 <- lm(log(price_4_nights) ~ prop_type_simplified + number_of_reviews + review_scores_rating, data=listings)
 #view model summary
 msummary(model1)
 #graph model/correlations
 GGally::ggpairs(model1) 
 
 #create model2
-model2 <- lm(price_4_nights ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type, data=listings)
+model2 <- lm(log(price_4_nights) ~ prop_type_simplified + number_of_reviews + review_scores_rating + room_type, data=listings)
 #view model summary
 msummary(model2)
 #graph model/correlations
 GGally::ggpairs(model2)
 
-
-
-
+#create model3 without co-linearity of score/review variables - using number_of_reviews instead of review_scores_rating, as the latter was not significant in the regression
+model3 <- lm(log(price_4_nights) ~ prop_type_simplified + number_of_reviews + room_type, data=listings)
+#view model summary
+msummary(model3)
+#graph model/correlations
+GGally::ggpairs(model3)
 ```
 
 ## Further variables/questions to explore on our own
@@ -308,10 +312,68 @@ GGally::ggpairs(model2)
 Our dataset has many more variables, so here are some ideas on how you can extend your analysis
 
 1. Are the number of `bathrooms`, `bedrooms`, `beds`, or size of the house (`accomodates`) significant predictors of `price_4_nights`? Or might these be co-linear variables?
+
+`bathrooms`are na values only, thus it can not be used in the regression. Similarly, beds and bedrooms are significantly correlated, meaning that there would be colinearity if both variables are included.
+
+```{r}
+model1 <- lm(log(price_4_nights) ~ number_of_reviews + bedrooms + beds, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1)
+car::vif(model1)
+```
+
 1. Do superhosts `(host_is_superhost`) command a pricing premium, after controlling for other variables?
+Interestingly, superhosts commands a price drop.
+
+```{r}
+model1 <- lm(log(price_4_nights) ~ host_is_superhost + number_of_reviews + beds, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1)
+```
+
 1. Some hosts allow you to immediately book their listing (`instant_bookable == TRUE`), while a non-trivial proportion don't. After controlling for other variables, is `instant_bookable` a significant predictor of `price_4_nights`?
+
+```{r}
+model1 <- lm(log(price_4_nights) ~ host_is_superhost + number_of_reviews + beds + instant_bookable, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1)
+```
+
+
 1. For all cities, there are 3 variables that relate to neighbourhoods: `neighbourhood`, `neighbourhood_cleansed`, and `neighbourhood_group_cleansed`. There are typically more than 20 neighbourhoods in each city, and it wouldn't make sense to include them all in your model. Use your city knowledge, or ask someone with city knowledge, and see whether you can group neighbourhoods together so the majority of listings falls in fewer (5-6 max) geographical areas. You would thus need to create a new categorical variabale `neighbourhood_simplified` and determine whether location is a predictor of `price_4_nights`
+
+```{r}
+
+```
+
+
 1. What is the effect of `avalability_30` or `reviews_per_month` on `price_4_nights`, after we control for other variables?
+
+```{r}
+model1 <- lm(log(price_4_nights) ~ reviews_per_month + availability_30 + host_is_superhost + beds + instant_bookable, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1)
+car::vif(model1)
+```
+```{r}
+#Final model
+
+model1 <- lm(log(price_4_nights) ~ prop_type_simplified + availability_30 + host_is_superhost + number_of_reviews + beds + instant_bookable, data=listings)
+#view model summary
+msummary(model1)
+#graph model/correlations
+GGally::ggpairs(model1)
+car::vif(model1)
+```
+
 
 
 ## Diagnostics, collinearity, summary tables
